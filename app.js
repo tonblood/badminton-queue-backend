@@ -10,7 +10,7 @@ const cors = require('cors')
 const mongoUri = process.env.MONGO_URI;
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowedOrigins = ['http://localhost:3000', 'http://localhost:8000'];
+    const allowedOrigins = ['http://localhost:3000', 'http://localhost:8000', 'https://badminton-queue-h1zt.vercel.app', 'https://badminton-queue-gilt.vercel.app'];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
