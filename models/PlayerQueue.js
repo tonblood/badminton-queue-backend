@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const randomId = require('../common-misc/randomId');
 
 const PlayerQueueSchema = new mongoose.Schema({
-    id: {type: String, default: randomId(6)},
+    id: String,
     firstPlayer: String,
     secondPlayer: String,
     winCount: Number,
