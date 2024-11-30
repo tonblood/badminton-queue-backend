@@ -6,7 +6,6 @@ const playersvalidator = require('../validation/playersvalidation.js');
 const response = require('../models/response.js');
 const TeamOnePlay = require('../models/TeamOnePlay.js');
 const TeamTwoPlay = require('../models/TeamTwoPlay.js');
-const admin = process.env.ADMIN
 const { v4: uuidv4 } = require("uuid");
 
 const sendBody = async () => {
@@ -30,7 +29,6 @@ router.post('/', async (req, res, next) => {
     } else {
         const { update_by } = await req.body
         req.body = await { ...req.body, id: uuidv4().slice(0, 6), winCount: 0 }
-        if (admin === update_by) {
             const checkPlayerOne = await TeamOnePlay.findOne()
             const checkPlayerTwo = await TeamTwoPlay.findOne()
             if (!checkPlayerOne) {
@@ -42,8 +40,6 @@ router.post('/', async (req, res, next) => {
             }
             const data = await sendBody()
             return res.status(201).json(response(201, 'create data successfully', data))
-        }
-        return res.status(400).json({ error: `you don't have permission to adjust data` });
     }
 })
 
