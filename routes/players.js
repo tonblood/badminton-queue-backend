@@ -29,17 +29,17 @@ router.post('/', async (req, res, next) => {
     } else {
         const { update_by } = await req.body
         req.body = await { ...req.body, id: uuidv4().slice(0, 6), winCount: 0 }
-            const checkPlayerOne = await TeamOnePlay.findOne()
-            const checkPlayerTwo = await TeamTwoPlay.findOne()
-            if (!checkPlayerOne) {
-                await TeamOnePlay.create(req.body)
-            } else if (!checkPlayerTwo) {
-                await TeamTwoPlay.create(req.body)
-            } else {
-                await PlayerQueues.create(req.body)
-            }
-            const data = await sendBody()
-            return res.status(201).json(response(201, 'create data successfully', data))
+        const checkPlayerOne = await TeamOnePlay.findOne()
+        const checkPlayerTwo = await TeamTwoPlay.findOne()
+        if (!checkPlayerOne) {
+            await TeamOnePlay.create(req.body)
+        } else if (!checkPlayerTwo) {
+            await TeamTwoPlay.create(req.body)
+        } else {
+            await PlayerQueues.create(req.body)
+        }
+        const data = await sendBody()
+        return res.status(201).json(response(201, 'create data successfully', data))
     }
 })
 
@@ -173,6 +173,17 @@ router.delete('/deleteAll', async (req, res, next) => {
         await TeamOnePlay.deleteMany({})
         await TeamTwoPlay.deleteMany({})
         await PlayerQueues.deleteMany({})
+        const body = await sendBody()
+        res.status(200).json(response(200, 'update data successfully', body))
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting resource', error: error.message });
+    }
+})
+
+router.patch('/update/:id', async (req, res, next) => {
+    const resourceId = req.params.id;
+    try {
+        await PlayerQueues.findOneAndUpdate({ id: resourceId }, { $set : req.body}, {new: true})
         const body = await sendBody()
         res.status(200).json(response(200, 'update data successfully', body))
     } catch (error) {
