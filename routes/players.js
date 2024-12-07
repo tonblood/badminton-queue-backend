@@ -7,12 +7,22 @@ const response = require('../models/response.js');
 const TeamOnePlay = require('../models/TeamOnePlay.js');
 const TeamTwoPlay = require('../models/TeamTwoPlay.js');
 const { v4: uuidv4 } = require("uuid");
+const Players = require('../models/Players.js');
+const PlayingTeam = require('../models/PlayingTeam.js');
 
 const sendBody = async () => {
     const body = await {
         teamOnePlay: await TeamOnePlay.findOne().select('-_id -__v -update_by -update_at'),
         teamTwoPlay: await TeamTwoPlay.findOne().select('-_id -__v -update_by -update_at'),
         teamQueueList: await PlayerQueues.find().select('-_id -__v -update_by -update_at')
+    }
+    return body
+}
+
+const sendBodysepCourt = async (court) => {
+    const body = await {
+        playingTeams: await PlayingTeam.find({ courtId: court }).select('-_id -__v -update_by -update_at'),
+        teamQueueList: await PlayerQueues.find({ courtId: court }).select('-_id -__v -update_by -update_at')
     }
     return body
 }
@@ -183,12 +193,134 @@ router.delete('/deleteAll', async (req, res, next) => {
 router.patch('/update/:id', async (req, res, next) => {
     const resourceId = req.params.id;
     try {
-        await PlayerQueues.findOneAndUpdate({ id: resourceId }, { $set : req.body}, {new: true})
+        await PlayerQueues.findOneAndUpdate({ id: resourceId }, { $set: req.body }, { new: true })
         const body = await sendBody()
         res.status(200).json(response(200, 'update data successfully', body))
     } catch (error) {
         res.status(500).json({ message: 'Error deleting resource', error: error.message });
     }
 })
+
+//new api
+
+router.get('/api/players', async (req, res, next) => {
+    const { court } = req.query
+    try {
+        const data = await sendBodysepCourt(court)
+        return res.status(200).json(response(200, 'get data successfully', data))
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting resource', error: error.message });
+    }
+
+})
+
+router.post('/api/players', async (req, res, next) => {
+    const { error, value } = playersvalidator.validate(req.body)
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    } else {
+        const { update_by, courtId } = await req.body
+        req.body = await { ...req.body, id: uuidv4().slice(0, 6), winCount: 0 }
+        await Players.insertMany([{ id: uuidv4().slice(0, 6), player_name: req.body.firstPlayer, update_by: update_by, courtId: courtId }, { id: uuidv4().slice(0, 6), player_name: req.body.secondPlayer, update_by: update_by, courtId: courtId }])
+        const checkPlayingTeam = await PlayingTeam.find({ courtId: courtId })
+        if (checkPlayingTeam.length < 2) {
+            await PlayingTeam.create(req.body)
+        } else {
+            await PlayerQueues.create(req.body)
+        }
+        const data = await sendBodysepCourt(courtId)
+        return res.status(201).json(response(201, 'create data successfully', data))
+    }
+})
+
+router.patch('/api/players', async (req, res, next) => {
+    const { id, court } = req.query;
+    try {
+        const updatedData = await PlayerQueues.findOneAndUpdate({ id: id }, { $set: req.body }, { new: true })
+        const body = await sendBodysepCourt(court)
+        res.status(200).json(response(200, 'update data successfully', body))
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting resource', error: error.message });
+    }
+})
+
+router.delete('/api/players/delete', async (req, res, next) => {
+    const { id, court } = req.query;
+    try {
+        const deletedResource = await PlayerQueues.deleteOne({ id: id })
+        if (!deletedResource) {
+            return res.status(404).json({ message: 'Resource not found' });
+        }
+        const body = await sendBodysepCourt(court)
+        res.status(200).json(response(200, 'update data successfully', body))
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting resource', error: error.message });
+    }
+})
+
+router.delete('/api/players/deleteAll', async (req, res, next) => {
+    const { court } = req.query;
+    try {
+        await PlayingTeam.deleteMany({ courtId: court })
+        await PlayerQueues.deleteMany({ courtId: court })
+        const body = await sendBodysepCourt(court)
+        res.status(200).json(response(200, 'update data successfully', body))
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting resource', error: error.message });
+    }
+})
+
+router.patch('/api/players/win', async (req, res, next) => {
+    const { mode, court, id } = req.query
+    const { winCount, update_by } = req.body
+    // mode = [oneround, tworound]
+    if (mode === 'tworound') {
+        if (winCount) {
+            if (winCount == 1) {
+                const newTeam = await PlayerQueues.findOneAndDelete({ courtId: court })
+                const tempLoseTeam = await PlayingTeam.findOneAndUpdate({ courtId: court, id: { $ne: id } }, { $set: { winCount: 0 } }, { new: true })
+                await PlayingTeam.deleteOne({ id: tempLoseTeam.id })
+                await PlayingTeam.collection.insertOne(newTeam)
+                await PlayerQueues.collection.insertOne(tempLoseTeam)
+                await PlayingTeam.findOneAndUpdate({ id: id }, { $set: req.body }, { new: true })
+            } else if (winCount == 2) {
+                const newTeam1 = await PlayerQueues.findOneAndDelete({ courtId: court })
+                const newTeam2 = await PlayerQueues.findOneAndDelete({ courtId: court }).skip(1)
+                const tempTeamOne = await PlayingTeam.findOneAndUpdate({ courtId: court, id: id }, { $set: { winCount: 0 } }, { new: true })
+                const tempTeamTwo = await PlayingTeam.findOneAndUpdate({ courtId: court, id: { $ne: id } }, { $set: { winCount: 0 } }, { new: true })
+                await PlayingTeam.deleteMany({ courtId: court })
+                await PlayingTeam.collection.insertMany([newTeam1, newTeam2])
+                if (id === tempTeamOne.id) {
+                    await PlayerQueues.collection.insertMany([tempTeamTwo, tempTeamOne])
+                } else {
+                    await PlayerQueues.collection.insertMany([tempTeamOne, tempTeamTwo])
+                }
+            }
+            const body = await sendBodysepCourt(court)
+            return res.status(200).json(response(200, 'update data successfully', body))
+        } else {
+            return res.status(400).json({ error: 'winCount is required' });
+        }
+    } else if (mode === 'oneround') {
+        if (winCount) {
+            const newTeam1 = await PlayerQueues.findOneAndDelete({ courtId: court })
+            const newTeam2 = await PlayerQueues.findOneAndDelete({ courtId: court }).skip(1)
+            const tempTeamOne = await PlayingTeam.findOneAndUpdate({ courtId: court, id: id }, { $set: { winCount: 0 } }, { new: true })
+            const tempTeamTwo = await PlayingTeam.findOneAndUpdate({ courtId: court, id: { $ne: id } }, { $set: { winCount: 0 } }, { new: true })
+            await PlayingTeam.deleteMany({ courtId: court })
+            await PlayingTeam.collection.insertMany([newTeam1, newTeam2])
+            if (id === tempTeamOne.id) {
+                await PlayerQueues.collection.insertMany([tempTeamTwo, tempTeamOne])
+            } else {
+                await PlayerQueues.collection.insertMany([tempTeamOne, tempTeamTwo])
+            }
+            const body = await sendBodysepCourt(court)
+            return res.status(200).json(response(200, 'update data successfully', body))
+        } else {
+            return res.status(400).json({ error: 'winCount is required' });
+        }
+    }
+})
+
 
 module.exports = router;

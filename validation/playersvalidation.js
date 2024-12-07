@@ -6,7 +6,8 @@ const playersvalidator = Joi.object({
     secondPlayer: Joi.string().required(),
     winCount: Joi.number(),
     update_at: Joi.date(),
-    update_by: Joi.string().required()
+    update_by: Joi.string().required(),
+    courtId: Joi.number().required()
 });
 
 module.exports = playersvalidator
