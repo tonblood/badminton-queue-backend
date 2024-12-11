@@ -21,7 +21,8 @@ const sendBody = async () => {
 
 const sendBodysepCourt = async (court) => {
     const body = await {
-        playingTeams: await PlayingTeam.find({ courtId: court }).select('-_id -__v -update_by -update_at'),
+        teamOnePlay: await PlayingTeam.findOne({ courtId: court }).select('-_id -__v -update_by -update_at'),
+        teamTwoPlay: await PlayingTeam.findOne({ courtId: court }).select('-_id -__v -update_by -update_at').skip(1),
         teamQueueList: await PlayerQueues.find({ courtId: court }).select('-_id -__v -update_by -update_at')
     }
     return body
