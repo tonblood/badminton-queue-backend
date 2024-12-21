@@ -6,6 +6,8 @@ var logger = require('morgan');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const cors = require('cors')
+const http = require('http');
+
 
 const mongoUri = process.env.MONGO_URI;
 const corsOptions = {
@@ -68,5 +70,13 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+
+// websocket 
+// const server = http.createServer(app)
+
+// server.listen(process.env.PORT || '8080', () => {
+//   console.log(`Server is running on port ${process.env.PORT || '8080'}`);
+// });
 
 module.exports = app;
