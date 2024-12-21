@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
 const PlayerQueues = require('../models/PlayerQueue.js');
 const playersvalidator = require('../validation/playersvalidation.js');
 const response = require('../models/response.js');
@@ -225,9 +224,9 @@ router.post('/api/players', async (req, res, next) => {
         await Players.insertMany([{ id: uuidv4().slice(0, 6), player_name: req.body.firstPlayer, update_by: update_by, courtId: courtId }, { id: uuidv4().slice(0, 6), player_name: req.body.secondPlayer, update_by: update_by, courtId: courtId }])
         const checkPlayingTeam = await PlayingTeam.find({ courtId: courtId })
         if (checkPlayingTeam.length < 2) {
-            await PlayingTeam.create(req.body)
+            await PlayingTeam.collection.insertOne(req.body)
         } else {
-            await PlayerQueues.create(req.body)
+            await PlayerQueues.collection.insertOne(req.body)
         }
         const data = await sendBodysepCourt(courtId)
         return res.status(201).json(response(201, 'create data successfully', data))
