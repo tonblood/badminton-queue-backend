@@ -16,7 +16,7 @@ module.exports = async (server) => {
         // path: '/ws',
         cors: {
             origin: (origin, callback) => {
-                const allowedOrigins = ['http://localhost:3000', 'http://localhost:8000', 'https://badminton-queue-h1zt.vercel.app', 'https://badminton-queue-gilt.vercel.app'];
+                const allowedOrigins = ['http://localhost:3000', 'http://localhost:8000', 'https://badminton-queue-h1zt.vercel.app', 'https://badminton-queue-gilt.vercel.app', 'http://badminton-queue-server.onrender.com'];
                 if (!origin || allowedOrigins.includes(origin)) {
                     callback(null, true);
                 } else {
