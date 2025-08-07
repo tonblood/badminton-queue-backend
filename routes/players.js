@@ -322,5 +322,16 @@ router.patch('/api/players/win', async (req, res, next) => {
     }
 })
 
+router.patch('/api/players/order', async (req, res, next) => {
+    const { court } = req.query
+    const { orders } = req.body
+    if (court) {
+        await PlayerQueues.deleteMany({ courtId: court })
+        await PlayerQueues.insertMany(orders)
+        const body = await sendBodysepCourt(court)
+        return res.status(200).json(response(200, 'update data successfully', body))
+    } else return res.status(400).json({ error: 'court is required' });
+})
+
 
 module.exports = router;
